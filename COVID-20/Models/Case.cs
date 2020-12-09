@@ -6,19 +6,25 @@ using System.Threading.Tasks;
 namespace COVID_20.Models {
     public class Case {
         public int ID { get; set; }
-        public int CSVCaseId { get; set; }
+        public int CsvID { get; set; }
         public string Sex { get; set; }
-        public int Age { get; set; }
+        public int? Age { get; set; }
 
         public string ResidenceCountryName { get; set; }
+
+        public int ResidenceProvinceID { get; set; }
         public Province ResidenceProvince { get; set; }
+
+        public int ResidenceDistrictID { get; set; }
         public District ResidenceDistrict { get; set; }
+
+        public int LoaderProvinceID { get; set; }
         public Province LoaderProvince { get; set; }
 
         public DateTime? SymptomsStartDate { get; set; }
         public DateTime? DiagnoseDate { get; set; }
         public DateTime? CaseOpeningDate { get; set; }
-        public int SepiOpening { get; set; }
+        public int? SepiOpening { get; set; }
         public DateTime? AdmissionDate { get; set; }
         public bool IntensiveCare { get; set; }
         public DateTime? IntensiveCareDate { get; set; }
