@@ -27,19 +27,27 @@ namespace COVID_20.Controllers
         }
 
         [HttpGet("lastUpdate")]
-        public ActionResult<DateTime> LastUpdated() {
-            return _context.Cases.OrderByDescending(c => c.ID).Last().CSVLastUpdated;
+        public ActionResult<DatabaseUpdate> LastUpdated() {
+            if (!_context.DatabaseUpdates.Any())
+                return new DatabaseUpdate {
+                    Timestamp = null,
+                    LoadedRows = 0
+                };
+
+            return _context.DatabaseUpdates.OrderByDescending(du => du.ID).First();
         }
 
 
         [HttpPost("loadNewCasesFromExternalSource")]
-        public async Task<ActionResult<string>> UpdateFromDatabaseAsync() {
+        public async Task<ActionResult> UpdateFromDatabaseAsync() {
+
             static bool SpanishStringToBool(string str) => str == "SI";
 
             Dictionary<int, Province> provinceMap = new Dictionary<int, Province>();
             Dictionary<int, District> districtMap = new Dictionary<int, District>();
 
             List<Case> cases = new List<Case>();
+            List<Case> casesUpdate = new List<Case>();
             var uploader = new NpgsqlBulkUploader(_context);
 
             foreach (var province in _context.Provinces.ToList()) {
@@ -50,8 +58,10 @@ namespace COVID_20.Controllers
                 districtMap.Add(district.CsvID, district);
             }
 
-            int currCount = 0;
+            int currAdded = 0;
+            int currUpdated = 0;
 
+            DateTime lastUpdated = LastUpdated().Value.Timestamp ?? new DateTime(1, 1, 1);
             int maxCsvID = _context.Cases.Any() ? _context.Cases.Max(r => r.CsvID) : 0;
 
             var pageToGet = "https://sisa.msal.gov.ar/datos/descargas/covid-19/files/Covid19Casos.csv";
@@ -66,7 +76,8 @@ namespace COVID_20.Controllers
                 csv.ReadHeader();
 
                 while (csv.Read()) {
-                    if (csv.GetField<int>("id_evento_caso") <= maxCsvID)
+
+                    if (csv.GetField<DateTime>("ultima_actualizacion") < lastUpdated)
                         continue;
 
                     if (!provinceMap.ContainsKey(csv.GetField<int>("residencia_provincia_id"))) {
@@ -129,23 +140,48 @@ namespace COVID_20.Controllers
                         CSVLastUpdated = csv.GetField<DateTime>("ultima_actualizacion")
                     };
 
-                    cases.Add(c);
+                    if (csv.GetField<int>("id_evento_caso") > maxCsvID) {
+                        cases.Add(c);
+                        currAdded++;
+                    }
+                    else {
+                        casesUpdate.Add(c);
+                        currUpdated++;
+                    }
 
-                    currCount++;
 
-                    if (currCount % 100000 == 0) {
+
+                    if (currAdded > 0 && currAdded % 100000 == 0) {
                         uploader.Insert(cases);
-
                         cases = new List<Case>();
+
+                        _context.SaveChanges();
+                    }
+
+                    if(currUpdated > 0 && currUpdated % 100000 == 0) {
+                        uploader.Update(casesUpdate);
+                        casesUpdate = new List<Case>();
 
                         _context.SaveChanges();
                     }
                 }
 
                 uploader.Insert(cases);
+                uploader.Update(casesUpdate);
                 _context.SaveChanges();
 
-                return Ok($"Loaded {currCount} new cases");
+                _context.Add(
+                    new DatabaseUpdate {
+                        Timestamp = DateTime.Now,
+                        LoadedRows = currAdded
+                    }
+                );
+                _context.SaveChanges();
+
+                return Ok(new {
+                    Loaded = currAdded,
+                    Updated = currUpdated
+                });
             }
         }
     }

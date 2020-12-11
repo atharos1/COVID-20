@@ -2,6 +2,7 @@
 
 namespace COVID_20.ViewModels {
     public class CaseFilterViewModel {
+        public int? ProvinceID { get; set; }
         public bool? ICU { get; set; }
         public bool? Dead { get; set; }
         public CaseStatus? Status { get; set; }
