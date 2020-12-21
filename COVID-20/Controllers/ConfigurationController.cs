@@ -26,7 +26,12 @@ namespace COVID_20.Controllers
             _context = context;
         }
 
-        [HttpGet("lastUpdate")]
+        [HttpGet("updates")]
+        public ActionResult<List<DatabaseUpdate>> Updates() {
+            return _context.DatabaseUpdates.OrderByDescending(du => du.ID).ToList();
+        }
+
+        [HttpGet("updates/last")]
         public ActionResult<DatabaseUpdate> LastUpdated() {
             if (!_context.DatabaseUpdates.Any())
                 return new DatabaseUpdate {
@@ -38,7 +43,7 @@ namespace COVID_20.Controllers
         }
 
 
-        [HttpPost("loadNewCasesFromExternalSource")]
+        [HttpPost("updates")]
         public async Task<ActionResult> UpdateFromDatabaseAsync() {
 
             static bool SpanishStringToBool(string str) => str == "SI";
@@ -173,7 +178,9 @@ namespace COVID_20.Controllers
                 _context.Add(
                     new DatabaseUpdate {
                         Timestamp = DateTime.Now,
-                        LoadedRows = currAdded
+                        LoadedRows = currAdded + currUpdated,
+                        InsertedRows = currAdded,
+                        UpdatedRows = currUpdated
                     }
                 );
                 _context.SaveChanges();

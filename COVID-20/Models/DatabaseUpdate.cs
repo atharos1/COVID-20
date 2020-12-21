@@ -8,5 +8,7 @@ namespace COVID_20.Models {
         public int ID { get; set; }
         public DateTime? Timestamp { get; set; }
         public int LoadedRows { get; set; }
+        public int InsertedRows { get; set; }
+        public int UpdatedRows { get; set; }
     }
 }

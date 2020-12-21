@@ -41,8 +41,10 @@ namespace COVID_20.Controllers
 
         // GET: Cases
         [HttpGet]
-        public ActionResult<IEnumerable<Case>> Get([FromQuery] CaseFilterViewModel filters) {
-            var cases = FilterCases(filters);
+        public ActionResult<IEnumerable<Case>> Get([FromQuery] CaseFilterViewModel filters, [FromQuery] PaginationViewModel pagingOptions) {
+            var cases = FilterCases(filters)
+                .Skip((pagingOptions.PageNumber - 1) * pagingOptions.PageSize)
+                .Take(pagingOptions.PageSize);
 
             return Ok(cases.ToList());
         }
@@ -146,6 +148,18 @@ namespace COVID_20.Controllers
 
             if (filters.To != null)
                 cases = cases.Where(c => c.CaseOpeningDate <= filters.To);
+
+            if (filters.Sex != null)
+                cases = cases.Where(c => c.Sex == Enum.GetName(typeof(CaseFilterViewModel.PatientSex), filters.Sex));
+
+            if (filters.PublicFunding != null)
+                cases = cases.Where(c => c.PublicFounding == filters.PublicFunding);
+
+            if (filters.AgeLowerBound != null)
+                cases = cases.Where(c => c.Age >= filters.AgeLowerBound);
+
+            if (filters.AgeUpperBound != null)
+                cases = cases.Where(c => c.Age <= filters.AgeUpperBound);
 
             return cases;
         }
